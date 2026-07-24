@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-import '../data/app_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'main_shell.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,17 +15,72 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final nameCtrl = TextEditingController();
+  final emailCtrl = TextEditingController();
+  final passwordCtrl = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    nameCtrl.dispose();
+    emailCtrl.dispose();
+    passwordCtrl.dispose();
     super.dispose();
   }
 
-  void _login() {
-    AppStore.name = nameCtrl.text.trim().isEmpty ? 'Farhana' : nameCtrl.text.trim();
-    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => const MainShell()));
+  Future<void> _login() async {
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailCtrl.text.trim(),
+        password: passwordCtrl.text.trim(),
+      );
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const MainShell()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Ralat log masuk')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const MainShell()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ralat Google Sign-In: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -47,14 +104,31 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 14),
                       const Text('Selamat Datang ke\nPantunFlow', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, height: 1.2, fontWeight: FontWeight.w800, color: deepMaroon)),
                       const SizedBox(height: 26),
-                      TextField(controller: nameCtrl, keyboardType: TextInputType.emailAddress, decoration: appInput('Email')),
+                      TextField(controller: emailCtrl, keyboardType: TextInputType.emailAddress, decoration: appInput('Email')),
                       const SizedBox(height: 13),
-                      TextField(obscureText: true, decoration: appInput('Password', suffix: Icons.visibility_off_outlined)),
+                      TextField(controller: passwordCtrl, obscureText: true, decoration: appInput('Password', suffix: Icons.visibility_off_outlined)),
                       const SizedBox(height: 20),
-                      AppButton(label: 'LOG MASUK', onPressed: _login),
+                      _isLoading
+                          ? const CircularProgressIndicator(color: maroon)
+                          : AppButton(label: 'LOG MASUK', onPressed: _login),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _signInWithGoogle,
+                        icon: const Icon(Icons.g_mobiledata, size: 30, color: maroon),
+                        label: const Text('Log masuk dengan Google', style: TextStyle(color: deepMaroon, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          side: const BorderSide(color: maroon),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                       const SizedBox(height: 11),
                       TextButton(
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pendaftaran akan dibuka tidak lama lagi.'))),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                          );
+                        },
                         child: const Text('Belum ada akaun? Daftar', style: TextStyle(color: maroon, fontWeight: FontWeight.bold)),
                       ),
                     ],

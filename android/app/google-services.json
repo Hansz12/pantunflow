@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "516531186071",
+    "project_id": "pantunflow-41305",
+    "storage_bucket": "pantunflow-41305.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:516531186071:android:5f0d2aa30e4ed1b80bfcd2",
+        "android_client_info": {
+          "package_name": "com.example.pantunflow_mvp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrINiHcDQHrqYUh9LP6MyvFf27iNcqjT0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

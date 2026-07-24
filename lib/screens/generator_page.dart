@@ -19,6 +19,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   double mood = .2;
   String selectedTheme = 'Cinta';
   bool useLocation = false;
+  bool _isLoading = false; // <-- Sahaja ditambah untuk status loading
 
   @override
   void dispose() {
@@ -29,9 +30,30 @@ class _GeneratorPageState extends State<GeneratorPage> {
 
   String get _chosenMood => mood < .34 ? 'Gembira' : mood < .67 ? 'Tenang' : 'Sayu';
 
-  void _generatePantun() {
-    final pantun = generatePantun(keywordCtrl.text, selectedTheme, _chosenMood, useLocation ? locationCtrl.text : '');
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ResultPage(pantun: pantun)));
+  // <-- Diubah kepada async dan ditambah await untuk menyokong AI
+  void _generatePantun() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final pantun = await generatePantun(
+      keywordCtrl.text, 
+      selectedTheme, 
+      _chosenMood, 
+      useLocation ? locationCtrl.text : ''
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ResultPage(pantun: pantun),
+      ),
+    );
   }
 
   @override
@@ -83,7 +105,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
                         TextField(controller: locationCtrl, decoration: appInput('Contoh: Johor Bahru / Hari Ibu')),
                       ],
                       const SizedBox(height: 28),
-                      AppButton(label: 'JANA PANTUN', icon: Icons.auto_awesome, onPressed: _generatePantun),
+                      // <-- Sahaja ditambah paparan loading jika tengah generate
+                      _isLoading
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(color: maroon),
+                              ),
+                            )
+                          : AppButton(label: 'JANA PANTUN', icon: Icons.auto_awesome, onPressed: _generatePantun),
                     ],
                   ),
                 ),

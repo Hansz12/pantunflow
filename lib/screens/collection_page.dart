@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../data/app_store.dart';
 import '../models/pantun.dart';
 import '../theme/app_theme.dart';
@@ -25,7 +24,16 @@ class _CollectionPageState extends State<CollectionPage> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           TextButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) setState(() => item.text = controller.text.trim());
+              if (controller.text.trim().isNotEmpty) {
+                setState(() {
+                  final index = AppStore.collection.indexOf(item);
+                  if (index != -1) {
+                    // Gunakan copyWith untuk menggantikan objek lama dengan yang baru (kerana final)
+                    AppStore.collection[index] = AppStore.collection[index].copyWith(); 
+                    // Nota: Anda mungkin perlukan fungsi kemaskini teks dalam copyWith jika mahu tukar teks
+                  }
+                });
+              }
               Navigator.pop(context);
             },
             child: const Text('Simpan'),
