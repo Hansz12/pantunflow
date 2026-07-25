@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
+import '../data/app_store.dart';
 import '../theme/app_theme.dart';
-import '../data/app_store.dart'; // PENTING: Import AppStore supaya kita boleh simpan tema global
-import 'login_page.dart'; // Untuk navigasi semula ke login selepas sign out
+import 'login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -13,11 +13,11 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // Data sementara untuk profil (boleh sambung ke Firestore nanti)
-  String namaUser = 'Izatul';
+  String namaUser = 'Pengguna';
   String bioUser = 'Pencinta pantun';
 
-  // Senarai pilihan tema pantun (Diselaraskan mengikut kategori tema di HomePage / JSON anda)
+  bool _isSigningOut = false;
+
   final List<String> senaraiTema = [
     'Peribahasa & Kiasan',
     'Agama & Spiritual',
@@ -27,101 +27,956 @@ class _ProfilePageState extends State<ProfilePage> {
     'Jenaka',
   ];
 
-  // Fungsi untuk tukar tema kegemaran menggunakan dialog pilihan
-  void _tukarTema() {
-    showDialog(
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  void _loadUserProfile() {
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    final String firebaseName = user?.displayName?.trim() ?? '';
+    final String appStoreName = AppStore.name.trim();
+
+    if (firebaseName.isNotEmpty) {
+      namaUser = firebaseName;
+    } else if (appStoreName.isNotEmpty) {
+      namaUser = appStoreName;
+    } else {
+      namaUser = 'Pengguna';
+    }
+  }
+
+  int get _jumlahPantunDisimpan {
+    return AppStore.collection
+        .where((pantun) => pantun.saved)
+        .length;
+  }
+
+  String get _userEmail {
+    return FirebaseAuth.instance.currentUser?.email ?? 'Tiada emel';
+  }
+
+  String? get _photoUrl {
+    final String? photo = FirebaseAuth.instance.currentUser?.photoURL;
+
+    if (photo == null || photo.trim().isEmpty) {
+      return null;
+    }
+
+    return photo;
+  }
+
+  Future<void> _tukarTema() async {
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pilih Tema Kegemaran', style: TextStyle(color: deepMaroon, fontWeight: FontWeight.bold)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: senaraiTema.length,
-            itemBuilder: (context, index) {
-              final tema = senaraiTema[index];
-              return ListTile(
-                title: Text(tema),
-                leading: const Icon(Icons.favorite, color: maroon),
-                onTap: () {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext bottomSheetContext) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              24,
+            ),
+            decoration: const BoxDecoration(
+              color: paper,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Pilih Tema Kegemaran',
+                    style: TextStyle(
+                      color: deepMaroon,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Tema yang dipilih akan digunakan sebagai pilihan utama anda.',
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: senaraiTema.length,
+                    separatorBuilder: (_, __) {
+                      return const SizedBox(height: 8);
+                    },
+                    itemBuilder: (context, index) {
+                      final String tema = senaraiTema[index];
+                      final bool isSelected =
+                          AppStore.preferredTheme == tema;
+
+                      return Material(
+                        color: isSelected
+                            ? maroon.withOpacity(0.10)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            setState(() {
+                              AppStore.preferredTheme = tema;
+                            });
+
+                            Navigator.pop(bottomSheetContext);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Tema kegemaran dikemas kini kepada $tema.',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? maroon
+                                        : maroon.withOpacity(0.10),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.favorite,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : maroon,
+                                    size: 21,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Text(
+                                    tema,
+                                    style: TextStyle(
+                                      color: deepMaroon,
+                                      fontSize: 15,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: maroon,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _editProfil() async {
+    final TextEditingController nameController =
+    TextEditingController(text: namaUser);
+
+    final TextEditingController bioController =
+    TextEditingController(text: bioUser);
+
+    final GlobalKey<FormState> formKey =
+    GlobalKey<FormState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: paper,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          title: const Text(
+            'Edit Profil',
+            style: TextStyle(
+              color: deepMaroon,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    textCapitalization: TextCapitalization.words,
+                    maxLength: 40,
+                    decoration: InputDecoration(
+                      labelText: 'Nama',
+                      hintText: 'Masukkan nama anda',
+                      prefixIcon: const Icon(
+                        Icons.person_outline,
+                        color: maroon,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    validator: (String? value) {
+                      if (value == null ||
+                          value.trim().isEmpty) {
+                        return 'Nama tidak boleh kosong.';
+                      }
+
+                      if (value.trim().length < 2) {
+                        return 'Nama mestilah sekurang-kurangnya 2 aksara.';
+                      }
+
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: bioController,
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLength: 80,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Bio atau status',
+                      hintText: 'Contoh: Pencinta pantun Melayu',
+                      alignLabelWithHint: true,
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(bottom: 48),
+                        child: Icon(
+                          Icons.edit_note,
+                          color: maroon,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: maroon,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () async {
+                if (!(formKey.currentState?.validate() ??
+                    false)) {
+                  return;
+                }
+
+                final String newName =
+                nameController.text.trim();
+
+                final String newBio =
+                bioController.text.trim().isEmpty
+                    ? 'Pencinta pantun'
+                    : bioController.text.trim();
+
+                try {
+                  await FirebaseAuth.instance.currentUser
+                      ?.updateDisplayName(newName);
+
+                  if (!mounted) {
+                    return;
+                  }
+
                   setState(() {
-                    // SIMPAN TERUS KE APPDATA GLOBAL SUPAYA HOMEPAGE DAPAT BACA
-                    AppStore.preferredTheme = tema;
+                    namaUser = newName;
+                    bioUser = newBio;
+                    AppStore.name = newName;
                   });
-                  Navigator.pop(context);
+
+                  Navigator.pop(dialogContext);
+
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Tema kegemaran dikemas kini kepada: $tema')),
+                    const SnackBar(
+                      content: Text(
+                        'Profil berjaya dikemas kini.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
                   );
-                },
-              );
-            },
+                } on FirebaseAuthException catch (error) {
+                  if (!mounted) {
+                    return;
+                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        error.message ??
+                            'Profil tidak dapat dikemas kini.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } catch (_) {
+                  if (!mounted) {
+                    return;
+                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Berlaku ralat semasa mengemas kini profil.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    nameController.dispose();
+    bioController.dispose();
+  }
+
+  Future<void> _bukaTetapanAkaun() async {
+    final User? user =
+        FirebaseAuth.instance.currentUser;
+
+    final bool hasEmail =
+        user?.email != null &&
+            user!.email!.trim().isNotEmpty;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              24,
+            ),
+            decoration: const BoxDecoration(
+              color: paper,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Tetapan Akaun',
+                    style: TextStyle(
+                      color: deepMaroon,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _AccountInfoTile(
+                  icon: Icons.email_outlined,
+                  title: 'Alamat emel',
+                  subtitle: _userEmail,
+                ),
+                const SizedBox(height: 10),
+                _AccountInfoTile(
+                  icon: Icons.verified_user_outlined,
+                  title: 'Status pengesahan emel',
+                  subtitle: user?.emailVerified == true
+                      ? 'Emel telah disahkan'
+                      : 'Emel belum disahkan',
+                ),
+                if (hasEmail &&
+                    user?.emailVerified == false) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          await user?.sendEmailVerification();
+
+                          if (!mounted) {
+                            return;
+                          }
+
+                          Navigator.pop(sheetContext);
+
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Pautan pengesahan telah dihantar ke emel anda.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } on FirebaseAuthException catch (error) {
+                          if (!mounted) {
+                            return;
+                          }
+
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                error.message ??
+                                    'Pautan pengesahan tidak dapat dihantar.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.mark_email_read_outlined,
+                      ),
+                      label: const Text(
+                        'Hantar Pengesahan Emel',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: maroon,
+                        side: const BorderSide(
+                          color: maroon,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _paparTentangAplikasi() async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: paper,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          title: const Text(
+            'Tentang PantunFlow',
+            style: TextStyle(
+              color: deepMaroon,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 34,
+                backgroundColor: maroon,
+                child: Icon(
+                  Icons.auto_awesome,
+                  color: Colors.white,
+                  size: 34,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'PantunFlow',
+                style: TextStyle(
+                  color: deepMaroon,
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Versi 1.0.0',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 13,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'PantunFlow membantu pengguna menjana, menyimpan dan mengurus pantun Melayu berdasarkan tema, mood, kata kunci dan lokasi.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: maroon,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _signOut() async {
+    final bool? shouldSignOut =
+    await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: paper,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          title: const Text(
+            'Log Keluar',
+            style: TextStyle(
+              color: deepMaroon,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Adakah anda pasti mahu log keluar daripada akaun ini?',
+            style: TextStyle(
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Log Keluar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSignOut != true) {
+      return;
+    }
+
+    setState(() {
+      _isSigningOut = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const LoginPage(),
+        ),
+            (Route<dynamic> route) => false,
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSigningOut = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ??
+                'Log keluar tidak berjaya.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSigningOut = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Berlaku ralat semasa log keluar.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Widget _buildAvatar() {
+    final String? photoUrl = _photoUrl;
+
+    if (photoUrl != null) {
+      return CircleAvatar(
+        radius: 48,
+        backgroundColor: maroon,
+        child: CircleAvatar(
+          radius: 44,
+          backgroundColor: cream,
+          backgroundImage: NetworkImage(photoUrl),
+          onBackgroundImageError: (_, __) {},
+        ),
+      );
+    }
+
+    final String initial = namaUser.trim().isNotEmpty
+        ? namaUser.trim()[0].toUpperCase()
+        : 'P';
+
+    return CircleAvatar(
+      radius: 48,
+      backgroundColor: maroon,
+      child: CircleAvatar(
+        radius: 44,
+        backgroundColor: cream,
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: deepMaroon,
+            fontSize: 34,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
     );
   }
 
-  // Fungsi Edit Profil (Dialog ringkas ubah nama & bio)
-  void _editProfil() {
-    final nameCtrl = TextEditingController(text: namaUser);
-    final bioCtrl = TextEditingController(text: bioUser);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profil', style: TextStyle(color: deepMaroon, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama')),
-            const SizedBox(height: 12),
-            TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Bio / Status')),
-          ],
+  Widget _buildProfileHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        48,
+        20,
+        30,
+      ),
+      decoration: const BoxDecoration(
+        color: deepMaroon,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(34),
+          bottomRight: Radius.circular(34),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal', style: TextStyle(color: Colors.grey))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: maroon),
-            onPressed: () {
-              setState(() {
-                namaUser = nameCtrl.text.trim();
-                bioUser = bioCtrl.text.trim();
-                AppStore.name = namaUser; // Kemas kini nama global juga jika perlu
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profil berjaya dikemas kini!')),
-              );
-            },
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Profil',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 23,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Urus profil dan akaun PantunFlow anda',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 22),
+          _buildAvatar(),
+          const SizedBox(height: 14),
+          Text(
+            namaUser,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            bioUser,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _userEmail,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Fungsi Sign Out / Log Keluar
-  void _signOut() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log Keluar'),
-        content: const Text('Adakah anda pasti mahu log keluar dari akaun ini?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal', style: TextStyle(color: Colors.grey))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(context); // Tutup dialog
-              await FirebaseAuth.instance.signOut();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false,
-                );
-              }
-            },
-            child: const Text('Log Keluar', style: TextStyle(color: Colors.white)),
+  Widget _buildStatisticsSection() {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatisticCard(
+            icon: Icons.bookmark,
+            value: '$_jumlahPantunDisimpan',
+            label: 'Disimpan',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatisticCard(
+            icon: Icons.favorite,
+            value: AppStore.preferredTheme,
+            label: 'Tema kegemaran',
+            isTextValue: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFavouriteThemeCard() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: _tukarTema,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x10000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: maroon.withOpacity(0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite,
+                  color: maroon,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tema kegemaran',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      AppStore.preferredTheme,
+                      style: const TextStyle(
+                        color: deepMaroon,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: maroon,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _ProfileMenuTile(
+            icon: Icons.edit_outlined,
+            title: 'Edit Profil',
+            subtitle: 'Kemas kini nama dan bio',
+            onTap: _editProfil,
+          ),
+          const Divider(
+            height: 1,
+            indent: 70,
+          ),
+          _ProfileMenuTile(
+            icon: Icons.settings_outlined,
+            title: 'Tetapan Akaun',
+            subtitle: 'Lihat emel dan status akaun',
+            onTap: _bukaTetapanAkaun,
+          ),
+          const Divider(
+            height: 1,
+            indent: 70,
+          ),
+          _ProfileMenuTile(
+            icon: Icons.info_outline,
+            title: 'Tentang Aplikasi',
+            subtitle: 'Maklumat mengenai PantunFlow',
+            onTap: _paparTentangAplikasi,
+          ),
+          const Divider(
+            height: 1,
+            indent: 70,
+          ),
+          _ProfileMenuTile(
+            icon: Icons.logout,
+            title: 'Log Keluar',
+            subtitle: 'Keluar daripada akaun semasa',
+            iconColor: Colors.red,
+            titleColor: Colors.red,
+            showTrailing: false,
+            onTap: _isSigningOut ? null : _signOut,
           ),
         ],
       ),
@@ -130,160 +985,309 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Dapatkan emel pengguna semasa dari Firebase jika ada
-    final user = FirebaseAuth.instance.currentUser;
-    final userEmail = user?.email ?? 'izatulfitrahroslan@gmail.com';
-
     return Scaffold(
       backgroundColor: paper,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Melengkung di atas
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
-              decoration: const BoxDecoration(
-                color: deepMaroon,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            color: maroon,
+            onRefresh: () async {
+              setState(() {
+                _loadUserProfile();
+              });
+            },
+            child: SingleChildScrollView(
+              physics:
+              const AlwaysScrollableScrollPhysics(),
               child: Column(
                 children: [
-                  const Text('Profil', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 4),
-                  const Text('Akaun PantunFlow anda', style: TextStyle(fontSize: 14, color: Colors.white70)),
-                  const SizedBox(height: 20),
-                  
-                  // Avatar Bulat
-                  const CircleAvatar(
-                    radius: 45,
-                    backgroundColor: maroon,
-                    child: Icon(Icons.person, size: 50, color: Colors.white),
+                  _buildProfileHeader(),
+                  const SizedBox(height: 22),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ringkasan',
+                          style: TextStyle(
+                            color: deepMaroon,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildStatisticsSection(),
+                        const SizedBox(height: 14),
+                        _buildFavouriteThemeCard(),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Profil dan Akaun',
+                          style: TextStyle(
+                            color: deepMaroon,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMenuSection(),
+                        const SizedBox(height: 32),
+                        const Center(
+                          child: Text(
+                            'PantunFlow Versi 1.0.0',
+                            style: TextStyle(
+                              color: Colors.black38,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  
-                  // Nama & Bio
-                  Text(namaUser, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 2),
-                  Text(bioUser, style: const TextStyle(fontSize: 14, color: Colors.white70)),
-                  const SizedBox(height: 4),
-                  Text(userEmail, style: const TextStyle(fontSize: 12, color: Colors.white54)),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Kandungan Kad Pilihan
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  // 1. Kad Tema Kegemaran (Boleh ditekan untuk tukar)
-                  InkWell(
-                    onTap: _tukarTema,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 4))],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: maroon.withOpacity(0.1), shape: BoxShape.circle),
-                            child: const Icon(Icons.favorite, color: maroon),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Tema Kegemaran (Tekan untuk tukar)', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                const SizedBox(height: 2),
-                                // BACA TERUS DARI APPDATA GLOBAL SUPAYA SENTIASA SINKRON
-                                Text(AppStore.preferredTheme, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: deepMaroon)),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.edit_outlined, color: maroon, size: 20),
-                        ],
-                      ),
+          ),
+          if (_isSigningOut)
+            Container(
+              color: Colors.black.withOpacity(0.35),
+              child: const Center(
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 26,
+                      vertical: 22,
                     ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // 2. Kad Jumlah Pantun Disimpan
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 4))],
-                    ),
-                    child: Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: maroon.withOpacity(0.1), shape: BoxShape.circle),
-                          child: const Icon(Icons.bookmark, color: maroon),
+                        CircularProgressIndicator(
+                          color: maroon,
                         ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Jumlah Pantun Disimpan', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            const SizedBox(height: 2),
-                            Text('${AppStore.collection.length} pantun', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: deepMaroon)),
-                          ],
+                        SizedBox(height: 14),
+                        Text(
+                          'Sedang log keluar...',
+                          style: TextStyle(
+                            color: deepMaroon,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-                  const Divider(),
-                  const SizedBox(height: 10),
-
-                  // 3. Menu Tetapan & Akaun
-                  ListTile(
-                    leading: const Icon(Icons.edit, color: deepMaroon),
-                    title: const Text('Edit Profil', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Kemas kini nama dan bio'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: _editProfil,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.settings, color: deepMaroon),
-                    title: const Text('Tetapan Akaun (Account Setting)', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Urus keselamatan dan kata laluan'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tetapan akaun akan dibuka di sini.')),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text('Log Keluar (Sign Out)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red)),
-                    subtitle: const Text('Keluar dari akaun semasa'),
-                    onTap: _signOut,
-                  ),
-
-                  const SizedBox(height: 30),
-                ],
+                ),
               ),
             ),
-          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatisticCard extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final bool isTextValue;
+
+  const _StatisticCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.isTextValue = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(
+        minHeight: 125,
+      ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: maroon.withOpacity(0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: maroon,
+              size: 21,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            maxLines: isTextValue ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: deepMaroon,
+              fontSize: isTextValue ? 13 : 22,
+              fontWeight: FontWeight.bold,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileMenuTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final Color iconColor;
+  final Color titleColor;
+  final bool showTrailing;
+
+  const _ProfileMenuTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.iconColor = deepMaroon,
+    this.titleColor = Colors.black87,
+    this.showTrailing = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 5,
+      ),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: iconColor.withOpacity(0.10),
+          shape: BoxShape.circle,
         ),
+        child: Icon(
+          icon,
+          color: iconColor,
+          size: 21,
+        ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: titleColor,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          color: Colors.black54,
+          fontSize: 12,
+        ),
+      ),
+      trailing: showTrailing
+          ? const Icon(
+        Icons.chevron_right,
+        color: Colors.black38,
+      )
+          : null,
+      onTap: onTap,
+    );
+  }
+}
+
+class _AccountInfoTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _AccountInfoTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: maroon.withOpacity(0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: maroon,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: deepMaroon,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

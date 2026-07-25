@@ -17,11 +17,23 @@ dependencies:
   google_sign_in: ^6.2.1
   firebase_ai: ^2.3.0
   firebase_app_check: ^0.3.2+10
+  flutter_launcher_icons: ^0.14.4
+
 
 dev_dependencies:
   flutter_lints: ^5.0.0
+
 
 flutter:
   uses-material-design: true
   assets:
     - assets/pantun_data.json
+    - assets/icon/app_icon.png
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#5C0A1D"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
