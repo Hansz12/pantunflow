@@ -16,7 +16,7 @@ class Pantun {
   });
 
   // Fungsi copyWith untuk memudahkan update status 'saved'
-  Pantun copyWith({bool? saved}) {
+  Pantun copyWith({bool? saved, required String text}) {
     return Pantun(
       id: id,
       text: text,

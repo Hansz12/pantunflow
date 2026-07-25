@@ -10,149 +10,451 @@ import '../widgets/shared_widgets.dart';
 
 class ResultPage extends StatefulWidget {
   final Pantun pantun;
-  const ResultPage({super.key, required this.pantun});
+
+  const ResultPage({
+    super.key,
+    required this.pantun,
+  });
 
   @override
   State<ResultPage> createState() => _ResultPageState();
 }
 
 class _ResultPageState extends State<ResultPage> {
+  bool _isSharing = false;
+  bool _isCopying = false;
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+  }
+
+  bool _isPantunInCollection(Pantun target) {
+    return AppStore.collection.any(
+          (Pantun pantun) => pantun.id == target.id,
+    );
+  }
+
   void _toggleSaved() {
-    setState(() => widget.pantun.saved = !widget.pantun.saved);
-    if (widget.pantun.saved && !AppStore.collection.contains(widget.pantun)) {
+    final bool newSavedStatus = !widget.pantun.saved;
+
+    setState(() {
+      widget.pantun.saved = newSavedStatus;
+    });
+
+    /*
+      AppStore.collection digunakan sebagai pangkalan data utama pantun.
+
+      Jangan remove pantun daripada collection apabila pengguna
+      membuang daripada simpanan kerana ia boleh menghapuskan pantun
+      daripada data utama aplikasi.
+    */
+
+    if (newSavedStatus && !_isPantunInCollection(widget.pantun)) {
       AppStore.collection.insert(0, widget.pantun);
     }
-    if (!widget.pantun.saved) {
-      AppStore.collection.remove(widget.pantun);
-    }
-    
-    // Paparkan mesej maklum balas penjimatan
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(widget.pantun.saved ? 'Pantun berjaya disimpan.' : 'Pantun dibuang daripada simpanan.'),
-        duration: const Duration(seconds: 1),
-      ),
+
+    _showMessage(
+      newSavedStatus
+          ? 'Pantun berjaya disimpan dalam koleksi.'
+          : 'Pantun telah dibuang daripada simpanan.',
     );
   }
 
   Future<void> _copyPantun() async {
-    await Clipboard.setData(ClipboardData(text: widget.pantun.text));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pantun telah disalin ke papan klip.'),
-          duration: Duration(seconds: 1),
+    if (_isCopying) return;
+
+    setState(() {
+      _isCopying = true;
+    });
+
+    try {
+      await Clipboard.setData(
+        ClipboardData(
+          text: widget.pantun.text,
         ),
       );
+
+      if (!mounted) return;
+
+      _showMessage(
+        'Pantun telah disalin ke papan klip.',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('COPY PANTUN ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      _showMessage(
+        'Pantun tidak dapat disalin. Sila cuba lagi.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCopying = false;
+        });
+      }
     }
   }
 
-  // Fungsi Kongsi Sebenar menggunakan share_plus
+  String _buildShareMessage() {
+    final StringBuffer message = StringBuffer();
+
+    message.writeln('✨ Pantun Istimewa ✨');
+    message.writeln();
+    message.writeln(widget.pantun.text);
+    message.writeln();
+    message.writeln(
+      'Tema: ${widget.pantun.theme}',
+    );
+    message.writeln(
+      'Mood: ${widget.pantun.mood}',
+    );
+
+    if (widget.pantun.location.trim().isNotEmpty) {
+      message.writeln(
+        'Lokasi / Majlis: ${widget.pantun.location}',
+      );
+    }
+
+    message.writeln();
+    message.write(
+      'Dihasilkan melalui aplikasi PantunFlow.',
+    );
+
+    return message.toString();
+  }
+
   Future<void> _sharePantun() async {
-    final message = '''
-✨ Pantun Istimewa ✨
+    if (_isSharing) return;
 
-${widget.pantun.text}
+    setState(() {
+      _isSharing = true;
+    });
 
-(Tema: ${widget.pantun.theme} • Mood: ${widget.pantun.mood})
-Dihasilkan melalui aplikasi PantunFlow.
-''';
-    
-    await Share.share(message);
+    try {
+      await Share.share(
+        _buildShareMessage(),
+        subject: 'Pantun daripada PantunFlow',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('SHARE PANTUN ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      _showMessage(
+        'Pantun tidak dapat dikongsi. Sila cuba lagi.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSharing = false;
+        });
+      }
+    }
+  }
+
+  void _generateAgain() {
+    Navigator.of(context).pop();
+  }
+
+  Widget _buildPantunCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        22,
+        25,
+        22,
+        22,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: gold.withOpacity(0.25),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x24000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: gold.withOpacity(0.13),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.format_quote_rounded,
+              color: gold,
+              size: 34,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          SelectableText(
+            widget.pantun.text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 17,
+              height: 1.75,
+              color: deepMaroon,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInformationBadge(
+                icon: Icons.category_outlined,
+                label: widget.pantun.theme,
+              ),
+              _buildInformationBadge(
+                icon: Icons.sentiment_satisfied_alt_rounded,
+                label: widget.pantun.mood,
+              ),
+              if (widget.pantun.location.trim().isNotEmpty)
+                _buildInformationBadge(
+                  icon: Icons.location_on_outlined,
+                  label: widget.pantun.location,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInformationBadge({
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 11,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: maroon.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: maroon.withOpacity(0.12),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: maroon,
+            size: 15,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: maroon,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 16,
+      ),
+      decoration: BoxDecoration(
+        color: paper.withOpacity(0.90),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFE2D3B8),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          ResultAction(
+            icon: _isCopying
+                ? Icons.hourglass_top_rounded
+                : Icons.copy_outlined,
+            label: _isCopying ? 'Menyalin' : 'Salin',
+            onTap: _copyPantun,
+          ),
+          ResultAction(
+            icon: widget.pantun.saved
+                ? Icons.favorite_rounded
+                : Icons.favorite_outline_rounded,
+            label: widget.pantun.saved
+                ? 'Disimpan'
+                : 'Simpan',
+            highlighted: widget.pantun.saved,
+            onTap: _toggleSaved,
+          ),
+          ResultAction(
+            icon: _isSharing
+                ? Icons.hourglass_top_rounded
+                : Icons.share_outlined,
+            label: _isSharing ? 'Membuka' : 'Kongsi',
+            onTap: _sharePantun,
+          ),
+        ],
+      ),
+    );
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: BatikBackground(
-          child: SafeArea(
-            child: Column(
-              children: [
-                PageHeader(
-                  title: 'Keputusan Penjanaan',
-                  subtitle: 'Pantun istimewa untuk anda',
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: cream),
-                    onPressed: () => Navigator.pop(context),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BatikBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              PageHeader(
+                title: 'Keputusan Penjanaan',
+                subtitle: 'Pantun istimewa untuk anda',
+                leading: IconButton(
+                  tooltip: 'Kembali',
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: cream,
                   ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
                 ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'HASIL TERBAIK',
-                          style: TextStyle(letterSpacing: 1.5, fontSize: 13, fontWeight: FontWeight.bold, color: maroon),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  physics:
+                  const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                    20,
+                    22,
+                    20,
+                    30,
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 7,
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(21, 25, 21, 21),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [BoxShadow(color: Color(0x24000000), blurRadius: 11, offset: Offset(0, 5))],
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.format_quote_rounded, color: gold, size: 34),
-                              const SizedBox(height: 8),
-                              Text(
-                                widget.pantun.text,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 17, height: 1.7, color: deepMaroon),
-                              ),
-                              const SizedBox(height: 17),
-                              Text(
-                                '${widget.pantun.theme}  •  ${widget.pantun.mood}',
-                                style: const TextStyle(color: maroon, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
+                        decoration: BoxDecoration(
+                          color: maroon.withOpacity(0.09),
+                          borderRadius:
+                          BorderRadius.circular(20),
                         ),
-                        const SizedBox(height: 21),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 1. Butang Salin
-                            ResultAction(
-                              icon: Icons.copy_outlined,
-                              label: 'Salin',
-                              onTap: _copyPantun,
+                            Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 16,
+                              color: maroon,
                             ),
-                            // 2. Butang Simpan (Favorite)
-                            ResultAction(
-                              icon: widget.pantun.saved ? Icons.favorite : Icons.favorite_outline,
-                              label: widget.pantun.saved ? 'Disimpan' : 'Simpan',
-                              highlighted: widget.pantun.saved,
-                              onTap: _toggleSaved,
-                            ),
-                            // 3. Butang Kongsi
-                            ResultAction(
-                              icon: Icons.share_outlined,
-                              label: 'Kongsi',
-                              onTap: _sharePantun,
+                            SizedBox(width: 6),
+                            Text(
+                              'HASIL PANTUN',
+                              style: TextStyle(
+                                letterSpacing: 1.3,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: maroon,
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        OutlinedButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('JANA SEMULA'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: maroon,
-                            side: const BorderSide(color: maroon),
-                            minimumSize: const Size(double.infinity, 50),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _buildPantunCard(),
+
+                      const SizedBox(height: 22),
+
+                      _buildActionSection(),
+
+                      const SizedBox(height: 25),
+
+                      OutlinedButton.icon(
+                        onPressed: _generateAgain,
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                        ),
+                        label: const Text(
+                          'JANA SEMULA',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: maroon,
+                          side: const BorderSide(
+                            color: maroon,
+                          ),
+                          minimumSize:
+                          const Size(double.infinity, 52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                            BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      const Text(
+                        'Tekan “Jana Semula” untuk kembali dan mengubah kata kunci, mood atau tema.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.4,
+                          color: Color(0xFF7D6D61),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }
