@@ -4,7 +4,7 @@ import '../models/pantun.dart';
 
 class AppStore {
   // 1. Senaraikan tema yang sah supaya padanan tidak gagal
-  static String name = 'Izatul'; 
+  static String name = 'User';
   static String preferredTheme = 'Peribahasa & Kiasan'; 
 
   // Senarai permulaan kosong sebelum data dimuat turun dari JSON
