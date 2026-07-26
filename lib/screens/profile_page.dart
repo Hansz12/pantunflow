@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
+import '../data/history_store.dart';
 import '../theme/app_theme.dart';
 import 'login_page.dart';
 
@@ -764,9 +765,10 @@ class _ProfilePageState
     });
 
     try {
-      await FirebaseAuth.instance
-          .signOut();
+      await FirebaseAuth.instance.signOut();
 
+      HistoryStore.clearLocalHistory();
+      AppStore.clearUserSessionData();
       AppStore.name = 'User';
 
       if (!mounted) {

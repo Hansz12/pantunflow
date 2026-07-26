@@ -4,6 +4,8 @@ class Pantun {
   final String theme;
   final String mood;
   final String location;
+  final String keyword;
+  final DateTime? generatedAt;
   bool saved;
 
   Pantun({
@@ -12,6 +14,8 @@ class Pantun {
     required this.theme,
     required this.mood,
     required this.location,
+    this.keyword = '',
+    this.generatedAt,
     this.saved = false,
   });
 
@@ -20,6 +24,8 @@ class Pantun {
     String? theme,
     String? mood,
     String? location,
+    String? keyword,
+    DateTime? generatedAt,
     bool? saved,
   }) {
     return Pantun(
@@ -28,6 +34,8 @@ class Pantun {
       theme: theme ?? this.theme,
       mood: mood ?? this.mood,
       location: location ?? this.location,
+      keyword: keyword ?? this.keyword,
+      generatedAt: generatedAt ?? this.generatedAt,
       saved: saved ?? this.saved,
     );
   }
@@ -35,12 +43,23 @@ class Pantun {
   factory Pantun.fromJson(Map<String, dynamic> json) {
     // Format untuk pantun yang disimpan oleh aplikasi.
     if (json.containsKey('text')) {
+      DateTime? dt;
+      if (json['generatedAt'] != null) {
+        if (json['generatedAt'] is String) {
+          dt = DateTime.tryParse(json['generatedAt']);
+        } else if (json['generatedAt'] is int) {
+          dt = DateTime.fromMillisecondsSinceEpoch(json['generatedAt']);
+        }
+      }
+
       return Pantun(
         id: json['id']?.toString() ?? '',
         text: json['text']?.toString() ?? '',
         theme: json['theme']?.toString() ?? 'Umum',
         mood: json['mood']?.toString() ?? 'Tenang',
         location: json['location']?.toString() ?? '',
+        keyword: json['keyword']?.toString() ?? '',
+        generatedAt: dt,
         saved: json['saved'] == true,
       );
     }
@@ -63,6 +82,8 @@ class Pantun {
           'Umum',
       mood: 'Tenang',
       location: json['Negeri']?.toString() ?? '',
+      keyword: '',
+      generatedAt: null,
       saved: false,
     );
   }
@@ -74,6 +95,8 @@ class Pantun {
       'theme': theme,
       'mood': mood,
       'location': location,
+      'keyword': keyword,
+      'generatedAt': generatedAt?.toIso8601String(),
       'saved': saved,
     };
   }

@@ -273,6 +273,8 @@ Baris keempat
       theme: cleanTheme,
       mood: cleanMood,
       location: cleanLocation,
+      keyword: cleanKeyword,
+      generatedAt: DateTime.now(),
       saved: false,
     );
   } catch (e, s) {

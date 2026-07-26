@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/app_store.dart';
+import '../data/history_store.dart';
 import '../models/pantun.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pantun_widgets.dart';
@@ -23,6 +24,37 @@ class ResultPage extends StatefulWidget {
 class _ResultPageState extends State<ResultPage> {
   bool _isSharing = false;
   bool _isCopying = false;
+  bool _historySaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _saveToHistory();
+  }
+
+  Future<void> _saveToHistory() async {
+    debugPrint("========= SAVE HISTORY START =========");
+
+    if (_historySaved) return;
+
+    _historySaved = true;
+
+    try {
+      await HistoryStore.saveHistory(
+        widget.pantun,
+      );
+
+      debugPrint("========= SAVE HISTORY SUCCESS =========");
+    } catch (error, stackTrace) {
+      debugPrint(
+        'SAVE HISTORY ERROR: $error',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   void _showMessage(String message) {
     if (!mounted) return;
@@ -214,7 +246,7 @@ class _ResultPageState extends State<ResultPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: gold.withOpacity(0.25),
+          color: gold.withValues(alpha: 0.25),
         ),
         boxShadow: const [
           BoxShadow(
@@ -230,7 +262,7 @@ class _ResultPageState extends State<ResultPage> {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: gold.withOpacity(0.13),
+              color: gold.withValues(alpha: 0.13),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -286,10 +318,10 @@ class _ResultPageState extends State<ResultPage> {
         vertical: 7,
       ),
       decoration: BoxDecoration(
-        color: maroon.withOpacity(0.08),
+        color: maroon.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: maroon.withOpacity(0.12),
+          color: maroon.withValues(alpha: 0.12),
         ),
       ),
       child: Row(
@@ -322,7 +354,7 @@ class _ResultPageState extends State<ResultPage> {
         vertical: 16,
       ),
       decoration: BoxDecoration(
-        color: paper.withOpacity(0.90),
+        color: paper.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: const Color(0xFFE2D3B8),
@@ -399,7 +431,7 @@ class _ResultPageState extends State<ResultPage> {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: maroon.withOpacity(0.09),
+                          color: maroon.withValues(alpha: 0.09),
                           borderRadius:
                           BorderRadius.circular(20),
                         ),

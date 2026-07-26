@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
+import '../data/history_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'login_page.dart';
@@ -67,9 +68,10 @@ class _SplashPageState extends State<SplashPage>
       final User? currentUser =
           await FirebaseAuth.instance.authStateChanges().first;
 
-      if (currentUser != null) {
-        await AppStore.loadPantunFromAsset();
-      }
+    if (currentUser != null) {
+      await AppStore.loadPantunFromAsset();
+      await HistoryStore.loadHistory();
+    }
 
       await Future<void>.delayed(
         const Duration(milliseconds: 700),

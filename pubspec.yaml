@@ -20,6 +20,7 @@ dependencies:
   http: ^1.2.2
   shared_preferences: ^2.5.3
   cloud_firestore: ^5.6.12
+  intl: ^0.19.0
 
 
 dev_dependencies:
@@ -31,6 +32,7 @@ flutter:
   assets:
     - assets/pantun_data.json
     - assets/icon/app_icon.png
+    - assets/images/
 
 flutter_launcher_icons:
   android: "launcher_icon"

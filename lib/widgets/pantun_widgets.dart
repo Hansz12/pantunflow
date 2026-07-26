@@ -29,30 +29,211 @@ class ThemeTile extends StatelessWidget {
 
 class FeaturedPantun extends StatelessWidget {
   final Pantun pantun;
-  const FeaturedPantun({super.key, required this.pantun});
+
+  const FeaturedPantun({
+    super.key,
+    required this.pantun,
+  });
+
+  String _getBackgroundAsset(String theme) {
+    final normalized = theme.toLowerCase();
+
+    if (normalized.contains('cinta')) {
+      return 'assets/images/pantun_cinta.jpg';
+    }
+
+    if (normalized.contains('agama')) {
+      return 'assets/images/pantun_agama.jpg';
+    }
+
+    if (normalized.contains('jenaka')) {
+      return 'assets/images/pantun_jenaka.jpg';
+    }
+
+    if (normalized.contains('budi')) {
+      return 'assets/images/pantun_budi.jpg';
+    }
+
+    if (normalized.contains('peribahasa') ||
+        normalized.contains('kiasan')) {
+      return 'assets/images/pantun_peribahasa.jpg';
+    }
+
+    return 'assets/images/pantun_nasihat.jpg';
+  }
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: deepMaroon,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [BoxShadow(color: Color(0x30000000), blurRadius: 8, offset: Offset(0, 4))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final String imagePath =
+        _getBackgroundAsset(pantun.theme);
+
+    final bool hasLocation =
+        pantun.location.trim().isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      height: 250,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x30000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(20)),
-              child: Text(pantun.theme.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: deepMaroon)),
+            Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
+              errorBuilder: (
+                BuildContext context,
+                Object error,
+                StackTrace? stackTrace,
+              ) {
+                return Container(
+                  color: deepMaroon,
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            Text(pantun.text, style: const TextStyle(color: cream, height: 1.5, fontSize: 15)),
+
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x33000000),
+                    Color(0x99000000),
+                  ],
+                ),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Pantun Pilihan Hari Ini',
+                    style: TextStyle(
+                      color: cream,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        pantun.text,
+                        maxLines: 6,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: cream,
+                          fontSize: 15,
+                          height: 1.5,
+                          fontWeight: FontWeight.w500,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black87,
+                              blurRadius: 5,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black
+                                .withOpacity(0.34),
+                            borderRadius:
+                                BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            pantun.theme,
+                            maxLines: 1,
+                            overflow:
+                                TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: cream,
+                              fontSize: 11,
+                              fontWeight:
+                                  FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      if (hasLocation) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Row(
+                            mainAxisSize:
+                                MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 15,
+                                color: cream,
+                              ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  pantun.location,
+                                  maxLines: 1,
+                                  overflow:
+                                      TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: cream,
+                                    fontSize: 11,
+                                    fontWeight:
+                                        FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
-      );
+      ),
+    );
+  }
 }
 
 class ResultAction extends StatelessWidget {
