@@ -63,11 +63,15 @@ class _CollectionPageState extends State<CollectionPage> {
     message.writeln('Mood: ${item.mood}');
 
     if (item.location.trim().isNotEmpty) {
-      message.writeln('Lokasi / Majlis: ${item.location}');
+      message.writeln(
+        'Lokasi / Majlis: ${item.location}',
+      );
     }
 
     message.writeln();
-    message.write('Dikongsi melalui aplikasi PantunFlow.');
+    message.write(
+      'Dikongsi melalui aplikasi PantunFlow.',
+    );
 
     try {
       await Share.share(
@@ -101,7 +105,8 @@ class _CollectionPageState extends State<CollectionPage> {
             initialValue: item.text,
             minLines: 4,
             maxLines: 8,
-            textCapitalization: TextCapitalization.sentences,
+            textCapitalization:
+            TextCapitalization.sentences,
             onChanged: (String value) {
               editedText = value;
             },
@@ -131,7 +136,8 @@ class _CollectionPageState extends State<CollectionPage> {
             ElevatedButton(
               onPressed: () {
                 if (editedText.trim().isEmpty) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  ScaffoldMessenger.of(dialogContext)
+                      .showSnackBar(
                     const SnackBar(
                       content: Text(
                         'Teks pantun tidak boleh kosong.',
@@ -165,11 +171,11 @@ class _CollectionPageState extends State<CollectionPage> {
       return;
     }
 
-    setState(() {
-      AppStore.collection[index] = item.copyWith(
-        text: editedText.trim(),
-      );
-    });
+    AppStore.collection[index] = item.copyWith(
+      text: editedText.trim(),
+    );
+
+    AppStore.notifyCollectionChanged();
 
     _showMessage('Pantun berjaya dikemas kini.');
   }
@@ -222,9 +228,9 @@ class _CollectionPageState extends State<CollectionPage> {
 
     if (index == -1) return;
 
-    setState(() {
-      AppStore.collection[index].saved = false;
-    });
+    AppStore.collection[index].saved = false;
+
+    AppStore.notifyCollectionChanged();
 
     _showMessage('Pantun dibuang daripada simpanan.');
   }
@@ -296,12 +302,11 @@ class _CollectionPageState extends State<CollectionPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CollectionThumbnail(theme: item.theme),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
                 Wrap(
                   spacing: 6,
@@ -312,14 +317,13 @@ class _CollectionPageState extends State<CollectionPage> {
                       label: item.theme,
                     ),
                     _buildTag(
-                      icon: Icons.sentiment_satisfied_alt_rounded,
+                      icon:
+                      Icons.sentiment_satisfied_alt_rounded,
                       label: item.mood,
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 10),
-
                 Text(
                   item.text,
                   maxLines: 4,
@@ -331,9 +335,7 @@ class _CollectionPageState extends State<CollectionPage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     _buildSmallAction(
@@ -356,7 +358,8 @@ class _CollectionPageState extends State<CollectionPage> {
                       icon: Icons.delete_outline_rounded,
                       tooltip: 'Buang',
                       color: maroon,
-                      onTap: () => _removeFromSaved(item),
+                      onTap: () =>
+                          _removeFromSaved(item),
                     ),
                   ],
                 ),
@@ -423,81 +426,92 @@ class _CollectionPageState extends State<CollectionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Pantun> items = _savedItems;
+    return ValueListenableBuilder<int>(
+      valueListenable: AppStore.collectionNotifier,
+      builder: (
+          BuildContext context,
+          int value,
+          Widget? child,
+          ) {
+        final List<Pantun> items = _savedItems;
 
-    return BatikBackground(
-      child: SafeArea(
-        child: Column(
-          children: [
-            const PageHeader(
-              title: 'Koleksi Saya',
-              subtitle: 'Pantun kegemaran anda',
-            ),
-
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                18,
-                20,
-                10,
-              ),
-              child: Row(
-                children: [
-                  const Text(
-                    'Disimpan',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 19,
-                      color: deepMaroon,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: maroon.withOpacity(0.09),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${items.length} pantun',
-                      style: const TextStyle(
-                        color: maroon,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: items.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  8,
-                  20,
-                  24,
+        return BatikBackground(
+          child: SafeArea(
+            child: Column(
+              children: [
+                const PageHeader(
+                  title: 'Koleksi Saya',
+                  subtitle: 'Pantun kegemaran anda',
                 ),
-                itemCount: items.length,
-                separatorBuilder: (_, __) {
-                  return const SizedBox(height: 13);
-                },
-                itemBuilder: (_, int index) {
-                  return _buildPantunCard(
-                    items[index],
-                  );
-                },
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    20,
+                    18,
+                    20,
+                    10,
+                  ),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Disimpan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 19,
+                          color: deepMaroon,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: maroon.withOpacity(0.09),
+                          borderRadius:
+                          BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${items.length} pantun',
+                          style: const TextStyle(
+                            color: maroon,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: items.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.separated(
+                    padding:
+                    const EdgeInsets.fromLTRB(
+                      20,
+                      8,
+                      20,
+                      24,
+                    ),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) {
+                      return const SizedBox(
+                        height: 13,
+                      );
+                    },
+                    itemBuilder: (_, int index) {
+                      return _buildPantunCard(
+                        items[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

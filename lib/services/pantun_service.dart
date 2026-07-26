@@ -1,10 +1,12 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:csv/csv.dart';
-import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
 
+import '../config/api_key.dart';
 import '../data/app_store.dart';
 import '../models/pantun.dart';
 
@@ -17,7 +19,7 @@ Future<void> loadPantunFromCsv() async {
     );
 
     final List<List<dynamic>> rows =
-    const CsvToListConverter().convert(rawData);
+        const CsvToListConverter().convert(rawData);
 
     if (rows.length <= 1) {
       debugPrint('CSV pantun kosong atau hanya mempunyai header.');
@@ -88,27 +90,26 @@ Pantun recommendPantun() {
     );
   }
 
-  final String preferredTheme =
-  AppStore.preferredTheme.trim().toLowerCase();
+  final String preferredTheme = AppStore.preferredTheme.trim().toLowerCase();
 
   final List<Pantun> matches = AppStore.collection.where(
-        (Pantun pantun) {
+    (Pantun pantun) {
       return pantun.theme.trim().toLowerCase() == preferredTheme;
     },
   ).toList();
 
   final List<Pantun> source =
-  matches.isNotEmpty ? matches : AppStore.collection;
+      matches.isNotEmpty ? matches : AppStore.collection;
 
   return source[_random.nextInt(source.length)];
 }
 
 Future<Pantun> generatePantun(
-    String keyword,
-    String theme,
-    String mood,
-    String location,
-    ) async {
+  String keyword,
+  String theme,
+  String mood,
+  String location,
+) async {
   final String cleanKeyword = keyword.trim();
   final String cleanTheme = theme.trim();
   final String cleanMood = mood.trim();
@@ -120,21 +121,11 @@ Future<Pantun> generatePantun(
     );
   }
 
-  try {
-    final GenerativeModel model = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-3.5-flash',
-      generationConfig: GenerationConfig(
-        temperature: 0.85,
-        topP: 0.90,
-        maxOutputTokens: 220,
-      ),
-    );
+  final String locationInstruction = cleanLocation.isEmpty
+      ? 'Jangan masukkan lokasi atau nama majlis.'
+      : 'Masukkan lokasi atau majlis "$cleanLocation" secara semula jadi jika sesuai.';
 
-    final String locationInstruction = cleanLocation.isEmpty
-        ? 'Jangan masukkan lokasi atau nama majlis.'
-        : 'Masukkan lokasi atau majlis "$cleanLocation" secara semula jadi jika sesuai.';
-
-    final String prompt = '''
+  final String prompt = '''
 Anda ialah pakar pantun tradisional Melayu.
 
 Cipta SATU pantun empat kerat berdasarkan maklumat berikut:
@@ -164,48 +155,88 @@ Baris ketiga
 Baris keempat
 ''';
 
-    final GenerateContentResponse response =
-    await model.generateContent(
-      <Content>[
-        Content.text(prompt),
-      ],
+  debugPrint("========== PROMPT ==========");
+  debugPrint(prompt);
+
+  try {
+    final Uri url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/'
+      'models/gemini-3.6-flash:generateContent'
+      '?key=${ApiKey.geminiApiKey}',
     );
 
-    final String? rawText = response.text;
-
-    if (rawText == null || rawText.trim().isEmpty) {
-      throw const PantunGenerationException(
-        'Respons AI kosong.',
-      );
-    }
-
-    final String cleanedPantun = _cleanGeneratedPantun(
-      rawText,
+    final http.Response response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(
+        <String, dynamic>{
+          'contents': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'parts': <Map<String, String>>[
+                <String, String>{
+                  'text': prompt,
+                },
+              ],
+            },
+          ],
+          'generationConfig': <String, dynamic>{
+            'maxOutputTokens': 2048,
+            'thinkingConfig': <String, dynamic>{
+              'thinkingLevel': 'low',
+            },
+          },
+        },
+      ),
     );
 
-    final List<String> lines = _extractPantunLines(
-      cleanedPantun,
-    );
+    debugPrint("HTTP Status: ${response.statusCode}");
+    debugPrint(response.body);
 
-    if (lines.length != 4) {
+    if (response.statusCode != 200) {
       throw PantunGenerationException(
-        'AI menghasilkan ${lines.length} baris, bukan empat baris.',
+        "Gemini Error (${response.statusCode})\n${response.body}",
       );
     }
+
+    final Map<String, dynamic> json = jsonDecode(response.body);
+
+    final String rawText = json["candidates"][0]["content"]["parts"][0]["text"];
+
+    debugPrint("================ RAW GEMINI ================");
+    debugPrint(rawText);
+    debugPrint("===========================================");
+
+    final String cleanedPantun = _cleanGeneratedPantun(rawText);
+
+    final List<String> lines = _extractPantunLines(cleanedPantun);
+
+    if (lines.length < 4) {
+      return _generateLocalFallback(
+        cleanKeyword,
+        cleanTheme,
+        cleanMood,
+        cleanLocation,
+      );
+    }
+
+    final List<String> finalLines = lines.take(4).toList();
 
     return Pantun(
-      id: 'ai-${DateTime.now().millisecondsSinceEpoch}',
-      text: lines.join('\n'),
+      id: "ai-${DateTime.now().millisecondsSinceEpoch}",
+      text: finalLines.join("\n"),
       theme: cleanTheme,
       mood: cleanMood,
       location: cleanLocation,
       saved: false,
     );
-  } catch (error, stackTrace) {
-    debugPrint('RALAT GEMINI AI: $error');
-    debugPrintStack(stackTrace: stackTrace);
+  } catch (e, s) {
+    debugPrint("========== GEMINI ERROR ==========");
+    debugPrint(e.toString());
+    debugPrintStack(stackTrace: s);
+    debugPrint("==================================");
 
-    // Fallback tempatan supaya aplikasi masih boleh digunakan.
     return _generateLocalFallback(
       cleanKeyword,
       cleanTheme,
@@ -233,13 +264,13 @@ List<String> _extractPantunLines(String value) {
   final List<String> lines = value
       .split('\n')
       .map((String line) {
-    return line
-        .replaceFirst(
-      RegExp(r'^\s*(?:\d+[\.\)]|[-•*])\s*'),
-      '',
-    )
-        .trim();
-  })
+        return line
+            .replaceFirst(
+              RegExp(r'^\s*(?:\d+[\.\)]|[-•*])\s*'),
+              '',
+            )
+            .trim();
+      })
       .where((String line) => line.isNotEmpty)
       .toList();
 
@@ -260,14 +291,12 @@ List<String> _extractPantunLines(String value) {
 }
 
 Pantun _generateLocalFallback(
-    String keyword,
-    String theme,
-    String mood,
-    String location,
-    ) {
-  final String idea = keyword.trim().isEmpty
-      ? 'indah bahasa'
-      : keyword.trim();
+  String keyword,
+  String theme,
+  String mood,
+  String location,
+) {
+  final String idea = keyword.trim().isEmpty ? 'indah bahasa' : keyword.trim();
 
   final String place = location.trim();
 
@@ -291,7 +320,7 @@ Pantun _generateLocalFallback(
   ];
 
   final List<String> pembayang =
-  pembayangOptions[_random.nextInt(pembayangOptions.length)];
+      pembayangOptions[_random.nextInt(pembayangOptions.length)];
 
   final String thirdLine = _buildFallbackThirdLine(
     idea,
@@ -318,9 +347,9 @@ Pantun _generateLocalFallback(
 }
 
 String _buildFallbackThirdLine(
-    String keyword,
-    String mood,
-    ) {
+  String keyword,
+  String mood,
+) {
   switch (mood.toLowerCase()) {
     case 'gembira':
       return '$keyword membawa hati berseri,';

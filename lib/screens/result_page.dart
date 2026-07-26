@@ -41,30 +41,27 @@ class _ResultPageState extends State<ResultPage> {
       );
   }
 
-  bool _isPantunInCollection(Pantun target) {
-    return AppStore.collection.any(
-          (Pantun pantun) => pantun.id == target.id,
-    );
-  }
-
   void _toggleSaved() {
     final bool newSavedStatus = !widget.pantun.saved;
+
+    final int index = AppStore.collection.indexWhere(
+          (Pantun pantun) => pantun.id == widget.pantun.id,
+    );
 
     setState(() {
       widget.pantun.saved = newSavedStatus;
     });
 
-    /*
-      AppStore.collection digunakan sebagai pangkalan data utama pantun.
-
-      Jangan remove pantun daripada collection apabila pengguna
-      membuang daripada simpanan kerana ia boleh menghapuskan pantun
-      daripada data utama aplikasi.
-    */
-
-    if (newSavedStatus && !_isPantunInCollection(widget.pantun)) {
-      AppStore.collection.insert(0, widget.pantun);
+    if (index >= 0) {
+      AppStore.collection[index].saved = newSavedStatus;
+    } else if (newSavedStatus) {
+      AppStore.collection.insert(
+        0,
+        widget.pantun,
+      );
     }
+
+    AppStore.notifyCollectionChanged();
 
     _showMessage(
       newSavedStatus
@@ -210,9 +207,7 @@ class _ResultPageState extends State<ResultPage> {
               size: 34,
             ),
           ),
-
           const SizedBox(height: 16),
-
           SelectableText(
             widget.pantun.text,
             textAlign: TextAlign.center,
@@ -223,9 +218,7 @@ class _ResultPageState extends State<ResultPage> {
               fontWeight: FontWeight.w500,
             ),
           ),
-
           const SizedBox(height: 22),
-
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
@@ -356,7 +349,6 @@ class _ResultPageState extends State<ResultPage> {
                   },
                 ),
               ),
-
               Expanded(
                 child: SingleChildScrollView(
                   physics:
@@ -400,17 +392,11 @@ class _ResultPageState extends State<ResultPage> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 14),
-
                       _buildPantunCard(),
-
                       const SizedBox(height: 22),
-
                       _buildActionSection(),
-
                       const SizedBox(height: 25),
-
                       OutlinedButton.icon(
                         onPressed: _generateAgain,
                         icon: const Icon(
@@ -435,9 +421,7 @@ class _ResultPageState extends State<ResultPage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
                       const Text(
                         'Tekan “Jana Semula” untuk kembali dan mengubah kata kunci, mood atau tema.',
                         textAlign: TextAlign.center,

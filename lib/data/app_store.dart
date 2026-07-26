@@ -36,6 +36,13 @@ class AppStore {
 
   static List<Pantun> collection = <Pantun>[];
 
+  static final ValueNotifier<int> collectionNotifier =
+  ValueNotifier<int>(0);
+
+  static void notifyCollectionChanged() {
+    collectionNotifier.value++;
+  }
+
   static Future<void> loadPantunFromAsset() async {
     if (collection.isNotEmpty) {
       return;
@@ -60,6 +67,8 @@ class AppStore {
       if (rawData is! List<dynamic>) {
         collection = <Pantun>[];
 
+        notifyCollectionChanged();
+
         debugPrint(
           'Kunci data_klasifikasi_pantun tidak mengandungi senarai.',
         );
@@ -72,11 +81,15 @@ class AppStore {
           .map(Pantun.fromJson)
           .toList();
 
+      notifyCollectionChanged();
+
       debugPrint(
         'Berjaya memuatkan ${collection.length} pantun daripada JSON.',
       );
     } catch (error, stackTrace) {
       collection = <Pantun>[];
+
+      notifyCollectionChanged();
 
       debugPrint(
         'Ralat semasa membaca pantun_data.json: $error',
