@@ -90,18 +90,62 @@ Pantun recommendPantun() {
     );
   }
 
-  final String preferredTheme = AppStore.preferredTheme.trim().toLowerCase();
+  final List<Pantun> candidates =
+      List<Pantun>.from(AppStore.collection);
 
-  final List<Pantun> matches = AppStore.collection.where(
-    (Pantun pantun) {
-      return pantun.theme.trim().toLowerCase() == preferredTheme;
+  candidates.sort(
+    (Pantun a, Pantun b) {
+      int scoreA = 0;
+      int scoreB = 0;
+
+      // ==========================
+      // Theme Preference
+      // ==========================
+
+      scoreA +=
+          AppStore.getThemeScore(a.theme) * 3;
+
+      scoreB +=
+          AppStore.getThemeScore(b.theme) * 3;
+
+      // ==========================
+      // Mood Preference
+      // ==========================
+
+      scoreA +=
+          AppStore.getMoodScore(a.mood) * 2;
+
+      scoreB +=
+          AppStore.getMoodScore(b.mood) * 2;
+
+      // ==========================
+      // Preferred Theme
+      // ==========================
+
+      if (a.theme ==
+          AppStore.preferredTheme) {
+        scoreA += 2;
+      }
+
+      if (b.theme ==
+          AppStore.preferredTheme) {
+        scoreB += 2;
+      }
+
+      return scoreB.compareTo(scoreA);
     },
-  ).toList();
+  );
 
-  final List<Pantun> source =
-      matches.isNotEmpty ? matches : AppStore.collection;
+  // Ambil antara recommendation terbaik supaya
+  // tidak sentiasa keluar pantun yang sama.
 
-  return source[_random.nextInt(source.length)];
+  final int limit =
+      candidates.length < 8
+          ? candidates.length
+          : 8;
+
+  return candidates[
+      _random.nextInt(limit)];
 }
 
 Future<Pantun> generatePantun(

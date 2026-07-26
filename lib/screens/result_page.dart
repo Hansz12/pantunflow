@@ -41,11 +41,11 @@ class _ResultPageState extends State<ResultPage> {
       );
   }
 
-  void _toggleSaved() {
+  Future<void> _toggleSaved() async {
     final bool newSavedStatus = !widget.pantun.saved;
 
     final int index = AppStore.collection.indexWhere(
-          (Pantun pantun) => pantun.id == widget.pantun.id,
+      (Pantun pantun) => pantun.id == widget.pantun.id,
     );
 
     setState(() {
@@ -61,13 +61,45 @@ class _ResultPageState extends State<ResultPage> {
       );
     }
 
-    AppStore.notifyCollectionChanged();
+    try {
+      if (newSavedStatus) {
+        AppStore.recordInteraction(widget.pantun);
 
-    _showMessage(
-      newSavedStatus
-          ? 'Pantun berjaya disimpan dalam koleksi.'
-          : 'Pantun telah dibuang daripada simpanan.',
-    );
+        await AppStore.savePantunToFirebase(
+          widget.pantun,
+        );
+      } else {
+        AppStore.removeInteraction(widget.pantun);
+
+        await AppStore.removePantunFromFirebase(
+          widget.pantun,
+        );
+      }
+
+      AppStore.notifyCollectionChanged();
+
+      _showMessage(
+        newSavedStatus
+            ? 'Pantun berjaya disimpan.'
+            : 'Pantun dibuang daripada koleksi.',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+
+      setState(() {
+        widget.pantun.saved = !newSavedStatus;
+      });
+
+      if (index >= 0) {
+        AppStore.collection[index].saved =
+            !newSavedStatus;
+      }
+
+      _showMessage(
+        'Gagal menyimpan ke Firebase.',
+      );
+    }
   }
 
   Future<void> _copyPantun() async {

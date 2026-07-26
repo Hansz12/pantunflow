@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/app_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'login_page.dart';
@@ -64,7 +65,11 @@ class _SplashPageState extends State<SplashPage>
       await _animationController.forward();
 
       final User? currentUser =
-      await FirebaseAuth.instance.authStateChanges().first;
+          await FirebaseAuth.instance.authStateChanges().first;
+
+      if (currentUser != null) {
+        await AppStore.loadPantunFromAsset();
+      }
 
       await Future<void>.delayed(
         const Duration(milliseconds: 700),
@@ -76,9 +81,8 @@ class _SplashPageState extends State<SplashPage>
 
       _hasNavigated = true;
 
-      final Widget nextPage = currentUser == null
-          ? const LoginPage()
-          : const MainShell();
+      final Widget nextPage =
+          currentUser == null ? const LoginPage() : const MainShell();
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
@@ -131,34 +135,47 @@ class _SplashPageState extends State<SplashPage>
                         children: [
                           ScaleTransition(
                             scale: _scaleAnimation,
-                            child: ClipRRect(
-                              borderRadius:
-                              BorderRadius.circular(30),
-                              child: Image.asset(
-                                'assets/icon/app_icon.png',
-                                width: 150,
-                                height: 150,
-                                fit: BoxFit.cover,
-                                errorBuilder: (
+                            child: Container(
+                              width: 160,
+                              height: 160,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(32),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x22000000),
+                                    blurRadius: 18,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(24),
+                                child: Image.asset(
+                                  'assets/icon/app_icon.png',
+                                  width: 140,
+                                  height: 140,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (
                                     BuildContext context,
                                     Object error,
                                     StackTrace? stackTrace,
-                                    ) {
-                                  return Container(
-                                    width: 150,
-                                    height: 150,
-                                    decoration: BoxDecoration(
+                                  ) {
+                                    debugPrint(
+                                      'SPLASH LOGO ERROR: $error',
+                                    );
+
+                                    return Container(
                                       color: maroon,
-                                      borderRadius:
-                                      BorderRadius.circular(30),
-                                    ),
-                                    child: const Icon(
-                                      Icons.auto_awesome_rounded,
-                                      color: cream,
-                                      size: 72,
-                                    ),
-                                  );
-                                },
+                                      child: const Icon(
+                                        Icons.auto_awesome_rounded,
+                                        color: cream,
+                                        size: 72,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),

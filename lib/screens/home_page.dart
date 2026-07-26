@@ -1,9 +1,10 @@
-import 'dart:math';
+
 
 import 'package:flutter/material.dart';
 
 import '../data/app_store.dart';
 import '../models/pantun.dart';
+import '../services/pantun_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pantun_widgets.dart';
 import '../widgets/shared_widgets.dart';
@@ -17,10 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Random _random = Random();
-
-  final List<String> _recentPantunIds = <String>[];
-
+  // Recommendation state
   Pantun? _currentRecommended;
 
   bool _isLoading = true;
@@ -135,87 +133,8 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final List<Pantun> allPantun =
-        AppStore.collection;
-
-    if (allPantun.isEmpty) {
-      setState(() {
-        _currentRecommended = _fallbackPantun();
-      });
-
-      return;
-    }
-
-    final String preferredTheme =
-    _normalizeTheme(
-      AppStore.preferredTheme,
-    );
-
-    final bool hasPreferredTheme =
-        preferredTheme.isNotEmpty;
-
-    final List<Pantun> preferredMatches =
-    hasPreferredTheme
-        ? allPantun.where((Pantun pantun) {
-      return _normalizeTheme(
-        pantun.theme,
-      ) ==
-          preferredTheme;
-    }).toList()
-        : <Pantun>[];
-
-    final List<Pantun> primarySource =
-    preferredMatches.isNotEmpty
-        ? preferredMatches
-        : allPantun;
-
-    List<Pantun> availablePantun =
-    primarySource.where((Pantun pantun) {
-      return !_recentPantunIds.contains(
-        pantun.id,
-      );
-    }).toList();
-
-    if (availablePantun.isEmpty) {
-      _recentPantunIds.clear();
-
-      availablePantun =
-      List<Pantun>.from(primarySource);
-    }
-
-    Pantun selectedPantun = availablePantun[
-    _random.nextInt(
-      availablePantun.length,
-    )];
-
-    if (availablePantun.length > 1 &&
-        selectedPantun.id ==
-            _currentRecommended?.id) {
-      final List<Pantun> alternatives =
-      availablePantun.where((Pantun pantun) {
-        return pantun.id !=
-            _currentRecommended?.id;
-      }).toList();
-
-      if (alternatives.isNotEmpty) {
-        selectedPantun = alternatives[
-        _random.nextInt(
-          alternatives.length,
-        )];
-      }
-    }
-
-    _recentPantunIds.add(
-      selectedPantun.id,
-    );
-
-    if (_recentPantunIds.length > 5) {
-      _recentPantunIds.removeAt(0);
-    }
-
     setState(() {
-      _currentRecommended =
-          selectedPantun;
+      _currentRecommended = recommendPantun();
     });
   }
 
@@ -484,30 +403,43 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildRecommendationHeader() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: Text(
-            'Pantun Pilihan Hari Ini',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 21,
-              color: deepMaroon,
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Disyorkan Untuk Anda',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 21,
+                  color: deepMaroon,
+                ),
+              ),
             ),
-          ),
+            Material(
+              color: maroon.withOpacity(0.10),
+              shape: const CircleBorder(),
+              child: IconButton(
+                onPressed: _isLoading
+                    ? null
+                    : _generateRandomRecommendation,
+                tooltip: 'Tukar pantun pilihan',
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: maroon,
+                ),
+              ),
+            ),
+          ],
         ),
-        Material(
-          color: maroon.withOpacity(0.10),
-          shape: const CircleBorder(),
-          child: IconButton(
-            onPressed: _isLoading
-                ? null
-                : _generateRandomRecommendation,
-            tooltip: 'Tukar pantun pilihan',
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: maroon,
-            ),
+        const SizedBox(height: 4),
+        Text(
+          'Cadangan berdasarkan tema dan mood yang anda minati.',
+          style: TextStyle(
+            color: Colors.grey.shade700,
+            fontSize: 12,
           ),
         ),
       ],

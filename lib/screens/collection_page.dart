@@ -171,13 +171,30 @@ class _CollectionPageState extends State<CollectionPage> {
       return;
     }
 
-    AppStore.collection[index] = item.copyWith(
+    final Pantun updatedPantun = item.copyWith(
       text: editedText.trim(),
     );
 
-    AppStore.notifyCollectionChanged();
+    AppStore.collection[index] = updatedPantun;
 
-    _showMessage('Pantun berjaya dikemas kini.');
+    try {
+      await AppStore.updatePantunInFirebase(
+        updatedPantun,
+      );
+
+      AppStore.notifyCollectionChanged();
+
+      _showMessage(
+        'Pantun berjaya dikemas kini.',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+
+      _showMessage(
+        'Gagal mengemas kini pantun.',
+      );
+    }
   }
 
   Future<void> _removeFromSaved(Pantun item) async {
@@ -228,11 +245,28 @@ class _CollectionPageState extends State<CollectionPage> {
 
     if (index == -1) return;
 
-    AppStore.collection[index].saved = false;
+    try {
+      await AppStore.removePantunFromFirebase(
+        item,
+      );
 
-    AppStore.notifyCollectionChanged();
+      AppStore.collection[index].saved = false;
 
-    _showMessage('Pantun dibuang daripada simpanan.');
+      AppStore.removeInteraction(item);
+
+      AppStore.notifyCollectionChanged();
+
+      _showMessage(
+        'Pantun dibuang daripada simpanan.',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+
+      _showMessage(
+        'Gagal membuang pantun.',
+      );
+    }
   }
 
   Widget _buildEmptyState() {
