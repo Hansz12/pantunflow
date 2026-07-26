@@ -1,4 +1,4 @@
-name: pantunflow_mvp
+name: PantunFlow
 description: PantunFlow Flutter MVP - context-aware pantun generator and collection app.
 publish_to: 'none'
 version: 1.0.0+1

@@ -43,7 +43,9 @@ class _HomePageState extends State<HomePage> {
     try {
       await AppStore.loadPantunFromAsset();
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       if (AppStore.collection.isEmpty) {
         setState(() {
@@ -57,17 +59,26 @@ class _HomePageState extends State<HomePage> {
 
       _generateRandomRecommendation();
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _isLoading = false;
         _loadError = null;
       });
     } catch (error, stackTrace) {
-      debugPrint('HOME DATA LOAD ERROR: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      debugPrint(
+        'HOME DATA LOAD ERROR: $error',
+      );
 
-      if (!mounted) return;
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _isLoading = false;
@@ -81,7 +92,10 @@ class _HomePageState extends State<HomePage> {
     final String normalized = value
         .trim()
         .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), ' ');
+        .replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
 
     if (normalized.contains('peribahasa') ||
         normalized.contains('kiasan')) {
@@ -117,9 +131,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _generateRandomRecommendation() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
-    final List<Pantun> allPantun = AppStore.collection;
+    final List<Pantun> allPantun =
+        AppStore.collection;
 
     if (allPantun.isEmpty) {
       setState(() {
@@ -129,16 +146,20 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final String preferredTheme = _normalizeTheme(
+    final String preferredTheme =
+    _normalizeTheme(
       AppStore.preferredTheme,
     );
 
     final bool hasPreferredTheme =
-        preferredTheme.trim().isNotEmpty;
+        preferredTheme.isNotEmpty;
 
-    final List<Pantun> preferredMatches = hasPreferredTheme
+    final List<Pantun> preferredMatches =
+    hasPreferredTheme
         ? allPantun.where((Pantun pantun) {
-      return _normalizeTheme(pantun.theme) ==
+      return _normalizeTheme(
+        pantun.theme,
+      ) ==
           preferredTheme;
     }).toList()
         : <Pantun>[];
@@ -148,41 +169,53 @@ class _HomePageState extends State<HomePage> {
         ? preferredMatches
         : allPantun;
 
-    List<Pantun> availablePantun = primarySource.where(
-          (Pantun pantun) {
-        return !_recentPantunIds.contains(pantun.id);
-      },
-    ).toList();
+    List<Pantun> availablePantun =
+    primarySource.where((Pantun pantun) {
+      return !_recentPantunIds.contains(
+        pantun.id,
+      );
+    }).toList();
 
     if (availablePantun.isEmpty) {
       _recentPantunIds.clear();
-      availablePantun = List<Pantun>.from(primarySource);
+
+      availablePantun =
+      List<Pantun>.from(primarySource);
     }
 
     Pantun selectedPantun = availablePantun[
-    _random.nextInt(availablePantun.length)];
+    _random.nextInt(
+      availablePantun.length,
+    )];
 
     if (availablePantun.length > 1 &&
-        selectedPantun.id == _currentRecommended?.id) {
+        selectedPantun.id ==
+            _currentRecommended?.id) {
       final List<Pantun> alternatives =
       availablePantun.where((Pantun pantun) {
-        return pantun.id != _currentRecommended?.id;
+        return pantun.id !=
+            _currentRecommended?.id;
       }).toList();
 
       if (alternatives.isNotEmpty) {
         selectedPantun = alternatives[
-        _random.nextInt(alternatives.length)];
+        _random.nextInt(
+          alternatives.length,
+        )];
       }
     }
 
-    _recentPantunIds.add(selectedPantun.id);
+    _recentPantunIds.add(
+      selectedPantun.id,
+    );
 
     if (_recentPantunIds.length > 5) {
       _recentPantunIds.removeAt(0);
     }
 
     setState(() {
-      _currentRecommended = selectedPantun;
+      _currentRecommended =
+          selectedPantun;
     });
   }
 
@@ -201,7 +234,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _getGreeting() {
-    final int hour = DateTime.now().hour;
+    final int hour =
+        DateTime.now().hour;
 
     if (hour >= 5 && hour < 12) {
       return 'Selamat Pagi';
@@ -218,22 +252,29 @@ class _HomePageState extends State<HomePage> {
     return 'Selamat Malam';
   }
 
-  String _formatDisplayName(String? fullName) {
-    if (fullName == null || fullName.trim().isEmpty) {
+  String _formatDisplayName(
+      String? fullName,
+      ) {
+    if (fullName == null ||
+        fullName.trim().isEmpty) {
       return 'Pengguna PantunFlow';
     }
 
     final List<String> words = fullName
         .trim()
         .split(RegExp(r'\s+'))
-        .where((String word) => word.isNotEmpty)
+        .where(
+          (String word) =>
+      word.isNotEmpty,
+    )
         .toList();
 
     if (words.isEmpty) {
       return 'Pengguna PantunFlow';
     }
 
-    const Set<String> connectionWords = <String>{
+    const Set<String> connectionWords =
+    <String>{
       'bin',
       'binti',
       'a/l',
@@ -241,10 +282,13 @@ class _HomePageState extends State<HomePage> {
       'anak',
     };
 
-    final List<String> displayWords = <String>[];
+    final List<String> displayWords =
+    <String>[];
 
     for (final String word in words) {
-      if (connectionWords.contains(word.toLowerCase())) {
+      if (connectionWords.contains(
+        word.toLowerCase(),
+      )) {
         break;
       }
 
@@ -259,25 +303,34 @@ class _HomePageState extends State<HomePage> {
       displayWords.add(words.first);
     }
 
-    return displayWords.map(_toTitleCase).join(' ');
+    return displayWords
+        .map(_toTitleCase)
+        .join(' ');
   }
 
   String _toTitleCase(String value) {
-    final String word = value.trim().toLowerCase();
+    final String word =
+    value.trim().toLowerCase();
 
     if (word.isEmpty) {
       return '';
     }
 
-    return '${word[0].toUpperCase()}${word.substring(1)}';
+    return '${word[0].toUpperCase()}'
+        '${word.substring(1)}';
   }
 
-  int _getThemeCount(String themeName) {
+  int _getThemeCount(
+      String themeName,
+      ) {
     final String normalizedTheme =
     _normalizeTheme(themeName);
 
-    return AppStore.collection.where((Pantun pantun) {
-      return _normalizeTheme(pantun.theme) ==
+    return AppStore.collection
+        .where((Pantun pantun) {
+      return _normalizeTheme(
+        pantun.theme,
+      ) ==
           normalizedTheme;
     }).length;
   }
@@ -291,64 +344,79 @@ class _HomePageState extends State<HomePage> {
     _generateRandomRecommendation();
 
     await Future<void>.delayed(
-      const Duration(milliseconds: 350),
+      const Duration(
+        milliseconds: 350,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String displayName =
-    _formatDisplayName(AppStore.name);
+    return ValueListenableBuilder<String>(
+      valueListenable:
+      AppStore.nameNotifier,
+      builder: (
+          BuildContext context,
+          String currentName,
+          Widget? child,
+          ) {
+        final String displayName =
+        _formatDisplayName(
+          currentName,
+        );
 
-    return BatikBackground(
-      child: SafeArea(
-        child: RefreshIndicator(
-          color: maroon,
-          onRefresh: _refreshHome,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              18,
-              20,
-              30,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(displayName),
-
-                const SizedBox(height: 30),
-
-                _buildRecommendationHeader(),
-
-                const SizedBox(height: 12),
-
-                _buildRecommendedPantun(),
-
-                const SizedBox(height: 28),
-
-                _buildThemeHeader(),
-
-                const SizedBox(height: 14),
-
-                _buildThemeGrid(),
-              ],
+        return BatikBackground(
+          child: SafeArea(
+            child: RefreshIndicator(
+              color: maroon,
+              onRefresh: _refreshHome,
+              child: SingleChildScrollView(
+                physics:
+                const AlwaysScrollableScrollPhysics(),
+                padding:
+                const EdgeInsets.fromLTRB(
+                  20,
+                  18,
+                  20,
+                  30,
+                ),
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(
+                      displayName,
+                    ),
+                    const SizedBox(height: 30),
+                    _buildRecommendationHeader(),
+                    const SizedBox(height: 12),
+                    _buildRecommendedPantun(),
+                    const SizedBox(height: 28),
+                    _buildThemeHeader(),
+                    const SizedBox(height: 14),
+                    _buildThemeGrid(),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(String displayName) {
+  Widget _buildHeader(
+      String displayName,
+      ) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment:
+      CrossAxisAlignment.center,
       children: [
         Container(
           width: 54,
           height: 54,
-          decoration: const BoxDecoration(
+          decoration:
+          const BoxDecoration(
             color: maroon,
             shape: BoxShape.circle,
           ),
@@ -358,35 +426,38 @@ class _HomePageState extends State<HomePage> {
             size: 30,
           ),
         ),
-
         const SizedBox(width: 14),
-
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
               Text(
-                '${_getGreeting()},\n$displayName',
+                '${_getGreeting()},\n'
+                    '$displayName',
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontWeight: FontWeight.w800,
+                  fontWeight:
+                  FontWeight.w800,
                   fontSize: 20,
                   height: 1.18,
                   color: deepMaroon,
                 ),
               ),
-
               const SizedBox(height: 7),
-
               Container(
-                padding: const EdgeInsets.symmetric(
+                padding:
+                const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: maroon.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(20),
+                  color:
+                  maroon.withOpacity(0.10),
+                  borderRadius:
+                  BorderRadius.circular(20),
                 ),
                 child: Text(
                   _isLoading
@@ -395,10 +466,12 @@ class _HomePageState extends State<HomePage> {
                       '${AppStore.collection.length} '
                       'Pantun Warisan',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                  TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
+                    fontWeight:
+                    FontWeight.w700,
                     color: maroon,
                   ),
                 ),
@@ -423,7 +496,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-
         Material(
           color: maroon.withOpacity(0.10),
           shape: const CircleBorder(),
@@ -449,11 +521,13 @@ class _HomePageState extends State<HomePage> {
         height: 180,
         decoration: BoxDecoration(
           color: paper.withOpacity(0.75),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius:
+          BorderRadius.circular(20),
         ),
         child: const Center(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+            MainAxisSize.min,
             children: [
               CircularProgressIndicator(
                 color: maroon,
@@ -463,7 +537,8 @@ class _HomePageState extends State<HomePage> {
                 'Memuatkan pantun...',
                 style: TextStyle(
                   color: deepMaroon,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                  FontWeight.w700,
                 ),
               ),
             ],
@@ -475,12 +550,15 @@ class _HomePageState extends State<HomePage> {
     if (_loadError != null) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(22),
+        padding:
+        const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: paper,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius:
+          BorderRadius.circular(18),
           border: Border.all(
-            color: maroon.withOpacity(0.20),
+            color:
+            maroon.withOpacity(0.20),
           ),
         ),
         child: Column(
@@ -490,20 +568,17 @@ class _HomePageState extends State<HomePage> {
               color: maroon,
               size: 42,
             ),
-
             const SizedBox(height: 12),
-
             Text(
               _loadError!,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: deepMaroon,
-                fontWeight: FontWeight.w700,
+                fontWeight:
+                FontWeight.w700,
               ),
             ),
-
             const SizedBox(height: 14),
-
             OutlinedButton.icon(
               onPressed: _loadPantunData,
               icon: const Icon(
@@ -514,7 +589,8 @@ class _HomePageState extends State<HomePage> {
                 'Cuba Lagi',
                 style: TextStyle(
                   color: maroon,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                  FontWeight.bold,
                 ),
               ),
             ),
@@ -545,15 +621,16 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-
         Container(
-          padding: const EdgeInsets.symmetric(
+          padding:
+          const EdgeInsets.symmetric(
             horizontal: 10,
             vertical: 5,
           ),
           decoration: BoxDecoration(
             color: maroon.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius:
+            BorderRadius.circular(20),
           ),
           child: const Text(
             '6 Tema',
@@ -569,11 +646,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildThemeGrid() {
-    final List<ThemeItem> themes = <ThemeItem>[
+    final List<ThemeItem> themes =
+    <ThemeItem>[
       ThemeItem(
         title: 'Peribahasa & Kiasan',
-        icon: Icons.auto_stories_outlined,
-        shade: const Color(0xFF5A1E2B),
+        icon:
+        Icons.auto_stories_outlined,
+        shade:
+        const Color(0xFF5A1E2B),
         count: _getThemeCount(
           'Peribahasa & Kiasan',
         ),
@@ -581,23 +661,29 @@ class _HomePageState extends State<HomePage> {
       ThemeItem(
         title: 'Agama & Spiritual',
         icon: Icons.mosque_outlined,
-        shade: const Color(0xFF3B2219),
+        shade:
+        const Color(0xFF3B2219),
         count: _getThemeCount(
           'Agama & Spiritual',
         ),
       ),
       ThemeItem(
         title: 'Budi & Adab',
-        icon: Icons.handshake_outlined,
-        shade: const Color(0xFF965B32),
+        icon:
+        Icons.handshake_outlined,
+        shade:
+        const Color(0xFF965B32),
         count: _getThemeCount(
           'Budi & Adab',
         ),
       ),
       ThemeItem(
-        title: 'Cinta & Kasih Sayang',
-        icon: Icons.favorite_outline_rounded,
-        shade: const Color(0xFF6B313F),
+        title:
+        'Cinta & Kasih Sayang',
+        icon:
+        Icons.favorite_outline_rounded,
+        shade:
+        const Color(0xFF6B313F),
         count: _getThemeCount(
           'Cinta & Kasih Sayang',
         ),
@@ -605,23 +691,29 @@ class _HomePageState extends State<HomePage> {
       ThemeItem(
         title: 'Nasihat & Moral',
         icon: Icons.menu_book_outlined,
-        shade: const Color(0xFF5A1E2B),
+        shade:
+        const Color(0xFF5A1E2B),
         count: _getThemeCount(
           'Nasihat & Moral',
         ),
       ),
       ThemeItem(
         title: 'Jenaka',
-        icon: Icons.sentiment_very_satisfied_outlined,
-        shade: const Color(0xFF965B32),
-        count: _getThemeCount('Jenaka'),
+        icon: Icons
+            .sentiment_very_satisfied_outlined,
+        shade:
+        const Color(0xFF965B32),
+        count: _getThemeCount(
+          'Jenaka',
+        ),
       ),
     ];
 
     return GridView.builder(
       itemCount: themes.length,
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics:
+      const NeverScrollableScrollPhysics(),
       gridDelegate:
       const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -633,7 +725,8 @@ class _HomePageState extends State<HomePage> {
           BuildContext context,
           int index,
           ) {
-        final ThemeItem theme = themes[index];
+        final ThemeItem theme =
+        themes[index];
 
         return ThemeTile(
           title: theme.title,
@@ -681,7 +774,8 @@ class ThemeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: shade,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius:
+      BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: isLoading
@@ -689,34 +783,45 @@ class ThemeTile extends StatelessWidget {
             : () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => ThemePantunPage(
-                themeName: title,
-              ),
+              builder: (_) =>
+                  ThemePantunPage(
+                    themeName: title,
+                  ),
             ),
           );
         },
-        splashColor: Colors.white.withOpacity(0.16),
-        highlightColor: Colors.white.withOpacity(0.06),
+        splashColor:
+        Colors.white.withOpacity(0.16),
+        highlightColor:
+        Colors.white.withOpacity(0.06),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding:
+          const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius:
+            BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.09),
+              color:
+              Colors.white.withOpacity(0.09),
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.14),
-                      shape: BoxShape.circle,
+                    decoration:
+                    BoxDecoration(
+                      color: Colors.white
+                          .withOpacity(0.14),
+                      shape:
+                      BoxShape.circle,
                     ),
                     child: Icon(
                       icon,
@@ -724,9 +829,7 @@ class ThemeTile extends StatelessWidget {
                       size: 25,
                     ),
                   ),
-
                   const Spacer(),
-
                   const Icon(
                     Icons.arrow_outward_rounded,
                     color: Colors.white70,
@@ -734,23 +837,21 @@ class ThemeTile extends StatelessWidget {
                   ),
                 ],
               ),
-
               const Spacer(),
-
               Text(
                 title,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight:
+                  FontWeight.w800,
                   fontSize: 14,
                   height: 1.18,
                 ),
               ),
-
               const SizedBox(height: 7),
-
               Text(
                 isLoading
                     ? 'Memuatkan...'
@@ -758,10 +859,13 @@ class ThemeTile extends StatelessWidget {
                     ? '$pantunCount pantun'
                     : 'Lihat koleksi',
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.78),
-                  fontWeight: FontWeight.w600,
+                  color: Colors.white
+                      .withOpacity(0.78),
+                  fontWeight:
+                  FontWeight.w600,
                   fontSize: 10.5,
                 ),
               ),

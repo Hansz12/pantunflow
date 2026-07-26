@@ -20,6 +20,8 @@ class _SplashPageState extends State<SplashPage>
   late final Animation<double> _scaleAnimation;
   late final Animation<Offset> _slideAnimation;
 
+  bool _hasNavigated = false;
+
   @override
   void initState() {
     super.initState();
@@ -58,28 +60,47 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _startSplashFlow() async {
-    await _animationController.forward();
+    try {
+      await _animationController.forward();
 
-    await Future<void>.delayed(
-      const Duration(milliseconds: 700),
-    );
+      final User? currentUser =
+      await FirebaseAuth.instance.authStateChanges().first;
 
-    if (!mounted) {
-      return;
+      await Future<void>.delayed(
+        const Duration(milliseconds: 700),
+      );
+
+      if (!mounted || _hasNavigated) {
+        return;
+      }
+
+      _hasNavigated = true;
+
+      final Widget nextPage = currentUser == null
+          ? const LoginPage()
+          : const MainShell();
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => nextPage,
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('SPLASH FLOW ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted || _hasNavigated) {
+        return;
+      }
+
+      _hasNavigated = true;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const LoginPage(),
+        ),
+      );
     }
-
-    final User? currentUser =
-        FirebaseAuth.instance.currentUser;
-
-    final Widget nextPage = currentUser == null
-        ? const LoginPage()
-        : const MainShell();
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => nextPage,
-      ),
-    );
   }
 
   @override
@@ -110,10 +131,35 @@ class _SplashPageState extends State<SplashPage>
                         children: [
                           ScaleTransition(
                             scale: _scaleAnimation,
-                            child: Image.asset(
-                              'assets/icon/app_icon.png',
-                              width: 150,
-                              height: 150,
+                            child: ClipRRect(
+                              borderRadius:
+                              BorderRadius.circular(30),
+                              child: Image.asset(
+                                'assets/icon/app_icon.png',
+                                width: 150,
+                                height: 150,
+                                fit: BoxFit.cover,
+                                errorBuilder: (
+                                    BuildContext context,
+                                    Object error,
+                                    StackTrace? stackTrace,
+                                    ) {
+                                  return Container(
+                                    width: 150,
+                                    height: 150,
+                                    decoration: BoxDecoration(
+                                      color: maroon,
+                                      borderRadius:
+                                      BorderRadius.circular(30),
+                                    ),
+                                    child: const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      color: cream,
+                                      size: 72,
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                           const SizedBox(height: 22),

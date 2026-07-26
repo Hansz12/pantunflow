@@ -1,36 +1,92 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
 import '../models/pantun.dart';
 
 class AppStore {
-  // 1. Senaraikan tema yang sah supaya padanan tidak gagal
-  static String name = 'User';
-  static String preferredTheme = 'Peribahasa & Kiasan'; 
+  static final ValueNotifier<String> nameNotifier =
+  ValueNotifier<String>('User');
 
-  // Senarai permulaan kosong sebelum data dimuat turun dari JSON
-  static List<Pantun> collection = [];
+  static String get name => nameNotifier.value;
 
-  // Fungsi untuk baca fail JSON dari folder assets
+  static set name(String value) {
+    final String cleanedName = value.trim();
+
+    nameNotifier.value =
+    cleanedName.isEmpty ? 'User' : cleanedName;
+  }
+
+  static final ValueNotifier<String> preferredThemeNotifier =
+  ValueNotifier<String>(
+    'Peribahasa & Kiasan',
+  );
+
+  static String get preferredTheme =>
+      preferredThemeNotifier.value;
+
+  static set preferredTheme(String value) {
+    final String cleanedTheme = value.trim();
+
+    preferredThemeNotifier.value = cleanedTheme.isEmpty
+        ? 'Peribahasa & Kiasan'
+        : cleanedTheme;
+  }
+
+  static List<Pantun> collection = <Pantun>[];
+
   static Future<void> loadPantunFromAsset() async {
-    // Elakkan muat turun berulang kali jika koleksi sudah ada isi
-    if (collection.isNotEmpty) return;
+    if (collection.isNotEmpty) {
+      return;
+    }
 
     try {
-      // 1. Baca fail string dari assets
-      final String response = await rootBundle.loadString('assets/pantun_data.json');
-      
-      // 2. Decode string JSON kepada Map
-      final Map<String, dynamic> decodedMap = jsonDecode(response);
-      
-      // 3. Ambil senarai di dalam kunci "data_klasifikasi_pantun"
-      final List<dynamic> data = decodedMap['data_klasifikasi_pantun'] ?? [];
-      
-      // 4. Masukkan ke dalam senarai collection menggunakan Pantun.fromJson
-      collection = data.map((json) => Pantun.fromJson(json)).toList();
-      
-      print("Berjaya muat turun ${collection.length} pantun dari JSON!");
-    } catch (e) {
-      print("Ralat semasa membaca fail pantun_data.json: $e");
+      final String response = await rootBundle.loadString(
+        'assets/pantun_data.json',
+      );
+
+      final dynamic decodedJson = jsonDecode(response);
+
+      if (decodedJson is! Map<String, dynamic>) {
+        throw const FormatException(
+          'Format utama JSON bukan objek yang sah.',
+        );
+      }
+
+      final dynamic rawData =
+      decodedJson['data_klasifikasi_pantun'];
+
+      if (rawData is! List<dynamic>) {
+        collection = <Pantun>[];
+
+        debugPrint(
+          'Kunci data_klasifikasi_pantun tidak mengandungi senarai.',
+        );
+
+        return;
+      }
+
+      collection = rawData
+          .whereType<Map<String, dynamic>>()
+          .map(Pantun.fromJson)
+          .toList();
+
+      debugPrint(
+        'Berjaya memuatkan ${collection.length} pantun daripada JSON.',
+      );
+    } catch (error, stackTrace) {
+      collection = <Pantun>[];
+
+      debugPrint(
+        'Ralat semasa membaca pantun_data.json: $error',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      rethrow;
     }
   }
 }
